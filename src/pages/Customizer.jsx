@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useSnapshot } from "valtio";
-import config from "../config/config";
+import config from "../config/config"; 
 import state from "../store";
 import { download } from "../assets";
 import { downloadCanvasToImage, reader } from "../config/helpers";
@@ -16,58 +16,84 @@ import {
 } from "../components";
 const Customizer = () => {
   const snap = useSnapshot(state);
-  const [file, setFile] = useState("");
-  const [prompt, setPrompt] = useState("");
+
+  const [file, setFile] = useState('');
+
+  const [prompt, setPrompt] = useState('');
   const [generatingImg, setGeneratingImg] = useState(false);
+
   const [activeEditorTab, setActiveEditorTab] = useState("");
   const [activeFilterTab, setActiveFilterTab] = useState({
     logoShirt: true,
     stylishShirt: false,
-  });
+  })
 
-  //   show tab content depending on the activeTab
+  // show tab content depending on the activeTab
   const generateTabContent = () => {
     switch (activeEditorTab) {
       case "colorpicker":
-        return <ColorPicker />;
+        return <ColorPicker />
       case "filepicker":
-        return <FilePicker file={file} setFile={setFile} readFile={readFile} />;
+        return <FilePicker
+          file={file}
+          setFile={setFile}
+          readFile={readFile}
+        />
       case "aipicker":
-        return <AIPicker
-        prompt={prompt}
-        setPrompt={setPrompt}
-        generatingImg={generatingImg}
-        handleSubmit={handleSubmit}
-        />;
+        return <AIPicker 
+          prompt={prompt}
+          setPrompt={setPrompt}
+          generatingImg={generatingImg}
+          handleSubmit={handleSubmit}
+        />
       default:
         return null;
     }
-  };
-  const handleSubmit=async(prompt)=>{
+  }
+
+  const handleSubmit = async (type) => {
     if(!prompt) return alert("Please enter a prompt");
+
     try {
-      // call the backend to generate an ai image
+      setGeneratingImg(true);
+
+      const response = await fetch('https://3-d-shirt-backend.vercel.app/api/v1/dalle', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          prompt,
+        })
+      })
+
+      const data = await response.json();
+
+      handleDecals(type, `data:image/png;base64,${data.photo}`)
     } catch (error) {
       alert(error)
-    } finally{
+    } finally {
       setGeneratingImg(false);
       setActiveEditorTab("");
     }
   }
-  //   handle file upload
+
   const handleDecals = (type, result) => {
     const decalType = DecalTypes[type];
+
     state[decalType.stateProperty] = result;
-    if (!activeFilterTab[decalType.filterTab]) {
-      handleActiveFilterTab(decalType.filterTab);
+
+    if(!activeFilterTab[decalType.filterTab]) {
+      handleActiveFilterTab(decalType.filterTab)
     }
-  };
+  }
+
   const handleActiveFilterTab = (tabName) => {
     switch (tabName) {
       case "logoShirt":
-        state.isLogoTexture = !activeFilterTab[tabName];
+          state.isLogoTexture = !activeFilterTab[tabName];
         break;
-        case "stylishShirt":
+      case "stylishShirt":
           state.isFullTexture = !activeFilterTab[tabName];
         break;
       default:
@@ -75,20 +101,24 @@ const Customizer = () => {
         state.isFullTexture = false;
         break;
     }
-    // after setting the state,activeFilterTab is updated
-    setActiveFilterTab((prevState)=>{
-      return{
+
+    // after setting the state, activeFilterTab is updated
+
+    setActiveFilterTab((prevState) => {
+      return {
         ...prevState,
-        [tabName]:!prevState[tabName]
+        [tabName]: !prevState[tabName]
       }
     })
-  };
+  }
+
   const readFile = (type) => {
-    reader(file).then((result) => {
-      handleDecals(type, result);
-      setActiveEditorTab("");
-    });
-  };
+    reader(file)
+      .then((result) => {
+        handleDecals(type, result);
+        setActiveEditorTab("");
+      })
+  }
   return (
     <AnimatePresence>
       {!snap.intro && (
@@ -135,6 +165,13 @@ const Customizer = () => {
                 handleClick={() => handleActiveFilterTab(tab.name)}
               />
             ))}
+            <button className='download-btn' onClick={downloadCanvasToImage}>
+          <img
+            src={download}
+            alt='download_image'
+            className='w-3/5 h-3/5 object-contain'
+          />
+          </button> 
           </motion.div>
         </>
       )}
@@ -143,15 +180,3 @@ const Customizer = () => {
 };
 
 export default Customizer;
-{
-  /* Download button */
-}
-{
-  /* <button className='download-btn' onClick={downloadCanvasToImage}>
-<img
-  src={download}
-  alt='download_image'
-  className='w-3/5 h-3/5 object-contain'
-/>
-</button> */
-}
